@@ -1,0 +1,2205 @@
+openapi: 3.0.1
+info:
+  title: STS Gateway
+  description: STS Gateway是STS的交易网关。提供了认证、管理和交易等功能。
+  contact:
+    email: hu.li@sci-inv.com
+    name: 李虎
+  version: 2.0.0
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: 'https://virtserver.swaggerhub.com/tigerlee/sts-server/2.0.0'
+  - description: D7 Test
+    url: 'https://192.168.1.236:12345'
+  - description: Localhost
+    url: 'https://localhost:1234'
+tags:
+  - name: auth
+    description: 认证功能。包含登录和注销。
+  - name: admin
+    description: 管理功能。包含资金账户管理和用户管理。
+  - name: stock
+    description: 股票交易功能。包括申报委托和撤销委托，查询资金、持仓、委托和成交等。
+  - name: algo
+    description: 交易算法。启停或修改交易算法。
+  - name: risk
+    description: 风险管理。
+paths:
+  /info:
+    get:
+      summary: 获取服务器信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/Info'
+      operationId: GetInfo
+      description: 获取服务器信息。
+  /sign_in:
+    post:
+      tags:
+        - auth
+      summary: 登录
+      requestBody:
+        description: 登录所需字段。
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: 用户名
+                  example: admin
+                password:
+                  type: string
+                  format: password
+                  description: 密码
+                  example: admin
+                client:
+                  type: string
+                  description: 客户端标识
+                  example: pecado
+                mac:
+                  type: string
+                  description: 客户端MAC地址列表，多个地址以逗号间隔。
+                  example: 'E0:D5:5E:69:E0:05,AB:CD:EF:GH:IJ:KL'
+                lan_ip:
+                  type: string
+                  description: 局域网IP。一般只会有一个。
+                  example: 192.168.1.2
+                hd_sn:
+                  type: string
+                  description: 硬盘序列号。暂不启用。
+                  example: '1234567'
+                cpu_id:
+                  type: string
+                  description: CPU序列号。暂不启用。
+                  example: '431431'
+                verify_code:
+                  type: string
+                  description: 验证码
+                  example: '123456'
+            examples:
+              example-1:
+                value:
+                  username: admin
+                  password: admin
+                  client: pecado
+                  mac: 'E0:D5:5E:69:E0:05,AB:CD:EF:GH:IJ:KL'
+                  lan_ip: 192.168.1.2
+                  hd_sn: '1234567'
+                  cpu_id: '431431'
+                  verify_code: '123456'
+      responses:
+        '200':
+          description: OK
+          headers: {}
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    description: 令牌
+                    type: string
+                    example: eyJ1c2VybmFtZSI6ImFkbWluIiwicm9sZSI6MSwic291cmNlIjoicGVjYWRvIiwiaXNzdWVkX2F0IjoiMTA6MTE6NTguMjUzIn0
+                  realname:
+                    description: 真实姓名
+                    type: string
+                    example: 龙旗测试账户
+                  role:
+                    description: 用户角色
+                    type: integer
+                    example: 1
+                  fund_account_ids:
+                    description: 该用户允许交易的资金账户ID列表，以逗号间隔。
+                    type: string
+                    example: '1927,2020'
+                  last_sign_in:
+                    description: 上次登录信息
+                    type: object
+                    properties:
+                      time:
+                        type: string
+                        example: '2020-01-01 12:23:34'
+                        description: 上次登录时间
+                      ip:
+                        type: string
+                        example: 223.5.5.5
+                        description: 上次登录公网IP
+                      mac:
+                        type: string
+                        example: 'AB:CD:EF:GH:IJ:KL'
+                        description: 上次登录MAC地址
+                required:
+                  - token
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: SignIn
+      description: 登录成功后，可使用响应中的Token进行后续操作。
+  /sign_out:
+    get:
+      tags:
+        - auth
+      summary: 注销
+      responses:
+        '204':
+          description: No Content
+          headers: {}
+      operationId: SignOut
+      description: 向服务器注销本次登录。Token在注销后将失效。
+  /password:
+    post:
+      tags:
+        - auth
+      summary: 修改密码
+      requestBody:
+        description: 修改密码所需字段。
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                old_password:
+                  type: string
+                  format: password
+                  description: 旧密码
+                  example: '123456'
+                new_password:
+                  type: string
+                  format: password
+                  description: 新密码
+                  example: p@ssw0rd
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: ChangePassword
+      description: 修改当前用户的登录密码。
+      security:
+        - BearerAuth: []
+  /activities:
+    get:
+      tags:
+        - admin
+      summary: 获取活动日志
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: username
+          description: 用户名
+        - schema:
+            type: string
+          in: query
+          name: time
+          description: 时间
+        - schema:
+            type: string
+          in: query
+          name: wan_ip
+          description: 公网IP
+        - schema:
+            type: string
+          in: query
+          name: lan_ip
+          description: 内网IP
+        - schema:
+            type: string
+          in: query
+          name: mac
+          description: MAC地址
+        - schema:
+            type: string
+          in: query
+          name: hd_sn
+          description: 硬盘序列号
+        - schema:
+            type: string
+          in: query
+          name: content
+          description: 活动日志内容
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+        '401':
+          description: Unauthorized
+      operationId: GetActivities
+      description: 获取指定查询条件对应的活动日志。每个查询条件均可模糊匹配。
+      security:
+        - BearerAuth: []
+  /fund_accounts:
+    get:
+      tags:
+        - admin
+      summary: 获取资金账户列表
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FundAccount'
+        '401':
+          description: Unauthorized
+      operationId: GetFundAccounts
+      description: 获取所有的资金账户。
+      security:
+        - BearerAuth: []
+    post:
+      tags:
+        - admin
+      summary: 增加资金账户
+      requestBody:
+        description: 待增加的资金账户字段
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FundAccount'
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: CreateFundAccount
+      description: 根据提交的字段，增加新的资金账户。
+      security:
+        - BearerAuth: []
+  '/fund_accounts/{id}':
+    parameters:
+      - $ref: '#/components/parameters/fund_account.id.path'
+    get:
+      tags:
+        - admin
+      summary: 获取指定的资金账户
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FundAccount'
+        '401':
+          description: Unauthorized
+      operationId: GetFundAccount
+      description: 获取单个资金账户。
+      security:
+        - BearerAuth: []
+    patch:
+      tags:
+        - admin
+      summary: 修改资金账户
+      requestBody:
+        description: 待修改的资金账户字段。资金账户ID必需，其它字段选填。
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/FundAccount'
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: ModifyFundAccount
+      description: 部分修改资金账户信息。
+      security:
+        - BearerAuth: []
+    delete:
+      tags:
+        - admin
+      summary: 删除资金账户
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+      operationId: RemoveFundAccount
+      description: 按资金账户ID来删除资金账户。
+  '/fund_accounts/{id}/password':
+    parameters:
+      - $ref: '#/components/parameters/fund_account.id.path'
+    post:
+      tags:
+        - admin
+      summary: 设置资金账户密码
+      requestBody:
+        description: 设置密码所需字段。
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                  format: password
+                  description: 密码
+                  example: '123456'
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: SetFundAccountPassword
+      description: 设置指定资金账户的交易密码。
+      security:
+        - BearerAuth: []
+  '/fund_accounts/{id}/active':
+    parameters:
+      - $ref: '#/components/parameters/fund_account.id.path'
+      - schema:
+          type: number
+          default: 0
+        in: header
+        name: Content-Length
+    post:
+      tags:
+        - admin
+      summary: 启用资金账户
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: ActivateFundAccount
+      description: 启用指定的资金账户。
+      security:
+        - BearerAuth: []
+    delete:
+      tags:
+        - admin
+      summary: 停用资金账户
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: DeactivateFundAccount
+      description: 停用指定的资金账户。
+      security:
+        - BearerAuth: []
+  /users:
+    get:
+      tags:
+        - admin
+      summary: 获取用户列表
+      description: 根据条件过滤用户列表。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetUsers
+      security:
+        - BearerAuth: []
+    post:
+      tags:
+        - admin
+      summary: 增加用户
+      requestBody:
+        description: 待增加的用户信息字段。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: 错误的请求数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: CreateUser
+      description: 根据提交的字段，增加新的用户。
+      security:
+        - BearerAuth: []
+  '/users/{username}':
+    parameters:
+      - $ref: '#/components/parameters/username.path'
+    patch:
+      tags:
+        - admin
+      summary: 修改用户信息
+      requestBody:
+        description: 待修改的用户字段。未修改的可以不填。
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/User'
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: ModifyUser
+      description: 部分修改用户信息。
+      security:
+        - BearerAuth: []
+    delete:
+      tags:
+        - admin
+      summary: 删除用户
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: username
+          description: 用户名
+          required: true
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: RemoveUser
+      description: 根据用户名来删除用户。
+      security:
+        - BearerAuth: []
+  '/users/{username}/active':
+    parameters:
+      - $ref: '#/components/parameters/username.path'
+    post:
+      tags:
+        - admin
+      summary: 启用用户
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: ActivateUser
+      description: 启用指定的用户。
+      security:
+        - BearerAuth: []
+    delete:
+      tags:
+        - admin
+      summary: 停用用户
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: DeactivateUser
+      description: 停用指定的用户。
+      security:
+        - BearerAuth: []
+  '/stock/{fund_account_id}/orders':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    post:
+      tags:
+        - stock
+      summary: 申报委托
+      requestBody:
+        description: 申报委托所需字段。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitOrderSingleRequest'
+            example:
+              symbol: 600000.SSE
+              business: '1'
+              side: B
+              price_type: L
+              price: 12.22
+              quantity: 100
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SubmitOrderSingleResponse'
+                  - $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: SubmitOrder
+      security:
+        - BearerAuth: []
+      description: |-
+        按资金账户ID经纪商交易柜台申报委托。
+        注意：在STS中委托成功并不代表委托就会最终成功，当柜台或交易所拒绝委托时，错误会通过委托事件推送给客户。
+    patch:
+      tags:
+        - stock
+      summary: 批量申报委托
+      requestBody:
+        description: 批量申报委托所需字段。批量申报委托时，响应中包含的sts_order_id等字段的顺序与请求内容一致。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitOrderListRequest'
+            example:
+              - symbol: 600000.SSE
+                business: '1'
+                side: B
+                price_type: L
+                price: 12.22
+                quantity: 100
+              - symbol: 000001.SZE
+                business: '1'
+                side: B
+                price_type: L
+                price: 22.22
+                quantity: 100
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitOrderListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: SubmitOrderList
+      security:
+        - BearerAuth: []
+      description: |-
+        按资金账户ID经纪商交易柜台批量申报委托。
+        注意：在STS中委托成功并不代表委托就会最终成功，当柜台或交易所拒绝委托时，错误会通过委托事件推送给客户。
+    delete:
+      tags:
+        - stock
+      summary: 批量撤销委托
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelOrderListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+      operationId: CancelOrderList
+      description: 按资金账户ID，向经纪商柜台进行批量撤销委托。委托唯一标识sts_order_id。
+      requestBody:
+        description: 撤销委托所需字段。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelOrderListRequest'
+            examples:
+              批量撤销:
+                value:
+                  - '129'
+                  - '927'
+    get:
+      tags:
+        - stock
+      summary: 获取委托列表
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetOrders
+      description: 按资金账户ID查询当日委托
+      security:
+        - BearerAuth: []
+  '/stock/{fund_account_id}/orders/{sts_order_id}':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+      - $ref: '#/components/parameters/sts_order_id.path'
+    get:
+      tags:
+        - stock
+      summary: 获取单笔委托
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetOrder
+      description: 按资金账户ID和STS委托编号查询当日单笔委托
+      security:
+        - BearerAuth: []
+    delete:
+      tags:
+        - stock
+      summary: 撤销单笔委托
+      responses:
+        '202':
+          description: Accepted
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+      operationId: CancelOrderSingle
+      description: 按资金账户ID和STS委托编号，向经纪商柜台撤销单笔委托。
+  '/stock/{fund_account_id}/matches':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - stock
+      summary: 获取成交列表
+      description: 获取指定资金账户ID的当日成交
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetMatches
+      security:
+        - BearerAuth: []
+  '/stock/{fund_account_id}/cancels':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - stock
+      summary: 获取撤单列表
+      description: 获取指定资金账户ID的当日撤单
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cancel'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetCancels
+      security:
+        - BearerAuth: []
+  '/stock/{fund_account_id}/asset':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - stock
+      summary: 获取资产信息
+      description: 查询指定资金账户ID的资产信息。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+      operationId: GetAsset
+  '/stock/{fund_account_id}/positions':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - stock
+      summary: 获取持仓列表
+      description: 获取指定资金账户ID的持仓列表
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetPositions
+      security:
+        - BearerAuth: []
+  '/stock/{fund_account_id}/events':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - stock
+      summary: 订阅事件
+      operationId: SubscribeEvents
+      security:
+        - BearerAuth: []
+      description: 订阅事件推送。包含委托回报，成交回报和撤单回报。所有订阅了同一个资金账号的用户都会收到相同的事件。每一个事件都带有一个编号，用户可以在订阅时在Header中指定Last-Event-ID以从某个事件开始回放。Last-Event-ID为0表示从头开始回放，不指定表示只接收最新事件。
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                default: text/event-stream
+              required: true
+            Cache-Control:
+              schema:
+                type: string
+                default: no-cache
+              required: true
+            Connection:
+              schema:
+                type: string
+                default: keep-alive
+              required: true
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: 'id:1\nevent:order\ndata:{}\n\nid:2\n:event:match\ndata:{}'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+        - schema:
+            type: integer
+          in: header
+          name: Last-Event-ID
+          description: 上次事件编号
+  '/stock/{fund_account_id}/cmd':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    post:
+      tags:
+        - stock
+      summary: 交易设置
+      description: 设置交易选项
+      requestBody:
+        description: 被执行的命令
+        content:
+          text/plain:
+            example: connect disable
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error_code: 0
+                error_text: OK
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: RunCmd
+      security:
+        - BearerAuth: []
+  '/future/{fund_account_id}/orders':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    post:
+      tags:
+        - future
+      summary: 申报委托
+      requestBody:
+        description: 申报委托所需字段。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitFutureOrderRequest'
+            example:
+              symbol: 600000.SSE
+              offset: O
+              side: B
+              hedge: '1'
+              price_type: L
+              price: 12.22
+              quantity: 100
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SubmitFutureOrderResponse'
+                  - $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: SubmitOrder
+      security:
+        - BearerAuth: []
+      description: |-
+        按资金账户ID经纪商交易柜台申报委托。
+        注意：在STS中委托成功并不代表委托就会最终成功，当柜台或交易所拒绝委托时，错误会通过委托事件推送给客户。
+    get:
+      tags:
+        - future
+      summary: 获取委托列表
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetOrders
+      description: 按资金账户ID查询当日委托
+      security:
+        - BearerAuth: []
+  '/future/{fund_account_id}/orders/{sts_order_id}':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+      - $ref: '#/components/parameters/sts_order_id.path'
+    get:
+      tags:
+        - future
+      summary: 获取单笔委托
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetOrder
+      description: 按资金账户ID和STS委托编号查询当日单笔委托
+      security:
+        - BearerAuth: []
+    delete:
+      tags:
+        - future
+      summary: 撤销单笔委托
+      responses:
+        '202':
+          description: Accepted
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+      operationId: CancelOrderSingle
+      description: 按资金账户ID和STS委托编号，向经纪商柜台撤销单笔委托。
+  '/future/{fund_account_id}/matches':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - future
+      summary: 获取成交列表
+      description: 获取指定资金账户ID的当日成交
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetMatches
+      security:
+        - BearerAuth: []
+  '/future/{fund_account_id}/cancels':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - future
+      summary: 获取撤单列表
+      description: 获取指定资金账户ID的当日撤单
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cancel'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetCancels
+      security:
+        - BearerAuth: []
+  '/future/{fund_account_id}/asset':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - future
+      summary: 获取资产信息
+      description: 查询指定资金账户ID的资产信息。
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: []
+      operationId: GetAsset
+  '/future/{fund_account_id}/positions':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - future
+      summary: 获取持仓列表
+      description: 获取指定资金账户ID的持仓列表
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Position'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetPositions
+      security:
+        - BearerAuth: []
+  '/future/{fund_account_id}/events':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - future
+      summary: 订阅事件
+      operationId: SubscribeEvents
+      security:
+        - BearerAuth: []
+      description: 订阅事件推送。包含委托回报，成交回报和撤单回报。所有订阅了同一个资金账号的用户都会收到相同的事件。每一个事件都带有一个编号，用户可以在订阅时在Header中指定Last-Event-ID以从某个事件开始回放。Last-Event-ID为0表示从头开始回放，不指定表示只接收最新事件。
+      responses:
+        '200':
+          description: OK
+          headers:
+            Content-Type:
+              schema:
+                type: string
+                default: text/event-stream
+              required: true
+            Cache-Control:
+              schema:
+                type: string
+                default: no-cache
+              required: true
+            Connection:
+              schema:
+                type: string
+                default: keep-alive
+              required: true
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: 'id:1\nevent:order\ndata:{}\n\nid:2\n:event:match\ndata:{}'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+        - schema:
+            type: integer
+          in: header
+          name: Last-Event-ID
+          description: 上次事件编号
+  '/risk/{fund_account_id}/plan':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - risk
+      summary: 获取风控方案
+      operationId: GetRiskPlan
+      security:
+        - BearerAuth: []
+      description: 获取指定资金账号的风控方案
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskPlan'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - risk
+      summary: 修改风控方案
+      operationId: ModifyRiskPlan
+      security:
+        - BearerAuth: []
+      description: 使用请求内容修改指定资金账户的风控方案。
+      requestBody:
+        description: 待增加的风控方案(不含fund_account_id)。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskPlan'
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - risk
+      summary: 删除风控方案
+      operationId: DeleteRiskRule
+      security:
+        - BearerAuth: []
+      description: 删除指定资金账户的风控方案
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/algos/{fund_account_id}':
+    parameters:
+      - $ref: '#/components/parameters/fund_account_id.path'
+    get:
+      tags:
+        - algo
+      summary: 获取算法列表
+      operationId: GetAlgos
+      security:
+        - BearerAuth: []
+      description: 获取全部交易算法
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+                example: '[{"id": 1, "active": true, "parameters": {"universe": ["600000.SSE", "601998.SSE"], target_alpha: 1.5}}]'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/algos/{algo_id}':
+    parameters:
+      - $ref: '#/components/parameters/algo_id.path'
+    post:
+      tags:
+        - algo
+      summary: 更新算法参数
+      operationId: ModifyAlgo
+      security:
+        - BearerAuth: []
+      description: 根据输入的参数更新交易算法
+      requestBody:
+        description: 算法参数。
+        content:
+          application/json:
+            schema:
+              type: string
+              example: '{"universe": ["600000.SSE", "601998.SSE"], target_alpha: 1.5}'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/algos/{algo_id}/active':
+    parameters:
+      - $ref: '#/components/parameters/algo_id.path'
+    post:
+      tags:
+        - algo
+      summary: 启用算法
+      operationId: ActivateAlgo
+      security:
+        - BearerAuth: []
+      description: 启用指定的交易算法
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - algo
+      summary: 停用算法
+      operationId: DeactivateAlgo
+      security:
+        - BearerAuth: []
+      description: 停用指定的交易算法
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /verify_code:
+    get:
+      summary: 获取验证码
+      tags:
+        - auth
+      responses:
+        '200':
+          description: OK
+          headers:
+            content-type:
+              schema:
+                type: string
+              description: image/png
+      operationId: VerifyCode
+      description: 获取验证码
+components:
+  schemas:
+    Info:
+      type: object
+      properties:
+        version:
+          type: string
+          description: 版本号
+          example: 0.1.0
+        name:
+          type: string
+          description: 经纪商名称
+          example: 银河证券
+        target:
+          type: string
+          description: 投资标的。分为stock和future
+          example: stock
+        captcha:
+          type: boolean
+          description: 是滞启用验证码
+    FundAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 资金账户ID
+          example: '2020'
+        name:
+          type: string
+          description: 资金账户名称
+          example: 龙旗证券测试账号
+        password:
+          type: string
+          format: password
+          description: 资金账户密码
+          example: lqkj
+        extra_info:
+          type: string
+          description: 额外信息。用于保存不是通用的信息，如股东账号等。JSON格式。
+          example: '{}'
+        remark:
+          type: string
+          description: 备注
+          example: 这是一行备注信息
+    User:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 用户名
+          example: longqi
+        realname:
+          type: string
+          description: 姓名
+          example: 龙起
+        password:
+          type: string
+          format: password
+          example: lqkj
+        role:
+          type: string
+          enum:
+            - admin
+            - manager
+            - trader
+          description: 用户角色。
+          example: trader
+        mac:
+          description: 绑定的MAC地址，只允许从这些IP地址发起请求。多个地址使用逗号间隔。
+          type: string
+          example: '82:0f:1d:60:a8:48,12:23:45:35:21:db'
+        ip:
+          description: 绑定的IP地址，可以是WAN IP或LAN IP。只允许从这些IP地址发起请求。多个地址使用逗号间隔。
+          type: string
+          example: '192.168.1.2,192.168.1.3'
+        fund_account_ids:
+          description: 允许该用户交易的资金账户ID列表，多个账号使用逗号间隔。
+          type: string
+          example: '2020,2021'
+    Activity:
+      title: Activity
+      type: object
+      description: 活动日志
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: 编号
+        category:
+          type: string
+          description: 活动类型
+        username:
+          type: string
+          description: 用户名
+        role:
+          type: string
+          description: 角色
+        wan_ip:
+          type: string
+          description: 公网IP
+        lan_ip:
+          type: string
+          description: 内网IP
+        mac:
+          type: string
+          description: MAC地址
+        hd_sn:
+          type: string
+          description: 硬盘序列号
+        content:
+          type: string
+          description: 活动内容
+        client:
+          type: string
+          description: 客户端
+        time:
+          type: string
+          description: 发生时间
+      x-examples:
+        登录:
+          id: 1
+          category: 用户
+          role: admin
+          username: test
+          wan_ip: 8.8.8.8
+          lan_ip: 192.168.1.1
+          mac: AB-CD-EF-GH-IJ-KL
+          content: 登录
+          client: sts
+          time: '2020-01-01 10:30:29'
+        设置资金账户密码:
+          id: 2
+          username: test
+          role: trader
+          wan_ip: 8.8.8.8
+          lan_ip: 192.168.1.1
+          mac: AB-CD-EF-GH-IJ-KL
+          content: 设置了资金账户密码
+          client: sts
+          time: '2020-01-01 10:30:29'
+        申报委托:
+          id: 3
+          username: test
+          role: trader
+          wan_ip: 8.8.8.8
+          lan_ip: 192.168.1.1
+          mac: AB-CD-EF-GH-IJ-KL
+          content: 以13.2买入了600股600000.SSE
+          client: sts
+          time: '2020-01-01 10:30:29'
+    Order:
+      type: object
+      properties:
+        fund_account_id:
+          type: string
+          description: 资金账户ID
+          example: '2020'
+        trading_day:
+          type: string
+          description: 交易日
+          example: '2020-01-01'
+        symbol:
+          type: string
+          description: 证券代码
+          example: 600000.SSE
+        business:
+          type: string
+          description: 业务类型。'1'=普通交易，'2'=信用交易，'3'=债券质押式协议回购，'4'=网上发行认购
+          default: '1'
+        side:
+          type: string
+          description: 买卖方向。B=买入，S=卖出
+          example: B
+        price_type:
+          type: string
+          description: '价格类型。L=限价, M=市价'
+          default: L
+          example: L
+        price:
+          type: number
+          format: double
+          description: 申报价格。当price_type为M时可以不用指定。
+          example: 12.22
+        quantity:
+          type: integer
+          description: 申报数量
+          example: 100
+        sts_order_id:
+          type: string
+          description: sts系统委托编号
+          example: '23'
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+          example: BON0001
+        status:
+          type: string
+          description: |
+            '1': 新报单,
+            '2': 已报,
+            '4': 部分成交,
+            '3': 待撤,
+            'F': 已成,
+            'C': 已撤,
+            'R': 废单,
+          enum:
+            - '1'
+            - '2'
+            - '3'
+            - '4'
+            - F
+            - C
+            - R
+          example: F
+        done:
+          type: integer
+          description: '0: 未完成， 1: 已完成(当报单处于废单/已撤/已成)'
+          enum:
+            - 0
+            - 1
+          example: 0
+        average_price:
+          type: number
+          format: double
+          description: 成交均价
+          example: 12.21
+        filled_quantity:
+          type: integer
+          format: int32
+          description: 成交数量
+          example: 100
+        leaves_quantity:
+          type: integer
+          format: int32
+          description: 剩余数量
+          example: 0
+        error_code:
+          type: integer
+          format: int32
+          description: 错误代码
+          example: 0
+        error_text:
+          type: string
+          description: 错误文本
+          example: 全部成交
+        client:
+          type: string
+          description: 委托来源
+          example: PECADO
+        accept_time:
+          type: string
+          description: 'STS Server收到时间 HH:MM:SS.sss'
+          example: '10:23:43.234'
+        submit_time:
+          type: string
+          description: 'STS Server提交到柜台时间 HH:MM:SS.sss'
+          example: '10:23:43.234'
+        recv_time:
+          type: string
+          description: 'STS Server收到柜台响应时间 HH:MM:SS.sss'
+          example: '10:23:43.234'
+        broker_insert_time:
+          type: string
+          description: '柜台提交时间 HH:MM:SS.sss'
+          example: '10:23:43.234'
+        broker_update_time:
+          type: string
+          description: '柜台更新时间 HH:MM:SS.sss'
+          example: '10:23:43.234'
+    Match:
+      type: object
+      properties:
+        fund_account_id:
+          type: string
+          description: 资金账户ID
+          example: '2020'
+        trading_day:
+          type: string
+          description: 交易日
+          example: '2020-01-01'
+        symbol:
+          type: string
+          description: 证券代码
+          example: 600000.SSE
+        business:
+          type: string
+          description: 业务类型
+          example: '1'
+        side:
+          type: string
+          description: 买卖方向
+          example: B
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+          example: BOI001
+        match_no:
+          type: string
+          description: 成交编号
+          example: MO001
+        price:
+          type: number
+          format: double
+          description: 成交价
+          example: 12.22
+        quantity:
+          type: integer
+          format: int32
+          description: 成交数量
+          example: 100
+        match_time:
+          type: string
+          description: '成交时间 HH:MM:SS.sss'
+          example: '11:22:33.444'
+        recv_time:
+          type: string
+          description: 'STS Server收到柜台响应时间 HH:MM:SS.sss'
+          example: '11:22:33.555'
+    Cancel:
+      type: object
+      properties:
+        fund_account_id:
+          type: string
+          description: 资金账户ID
+          example: '2020'
+        trading_day:
+          type: string
+          description: 交易日
+          example: '2020-01-01'
+        symbol:
+          type: string
+          description: 证券代码
+          example: 600000.SSE
+        business:
+          type: string
+          description: 业务类型
+          example: '1'
+        side:
+          type: string
+          description: 买卖方向
+          example: B
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+          example: BOI001
+        match_no:
+          type: string
+          description: 成交编号
+          example: MO001
+        price:
+          type: number
+          format: double
+          description: 成交价
+          example: 12.22
+        quantity:
+          type: integer
+          format: int32
+          description: 成交数量
+          example: 100
+        match_time:
+          type: string
+          description: '成交时间 HH:MM:SS.sss'
+          example: '11:22:33.444'
+        recv_time:
+          type: string
+          description: 'STS Server收到柜台响应时间 HH:MM:SS.sss'
+          example: '11:22:33.555'
+    Asset:
+      type: object
+      properties:
+        fund_account_id:
+          type: string
+          description: 资金账户ID
+          example: '2020'
+        trading_day:
+          type: string
+          description: 交易日
+          example: '2020-01-01'
+        total_assets:
+          type: number
+          format: double
+          description: 总资产  可用资金+冻结资金+持仓市值
+          example: 10000000
+        available_cash:
+          type: number
+          format: double
+          description: 可用资金
+          example: 5000000
+        frozen_cash:
+          type: number
+          format: double
+          description: 冻结资金
+          example: 0
+        position_value:
+          type: number
+          format: double
+          description: 持仓市值
+          example: 5000000
+        deposit:
+          type: number
+          format: double
+          description: 入金金额
+          example: 1000000
+        withdraw:
+          type: number
+          format: double
+          description: 出金金额
+          example: 1000000
+        commission:
+          type: number
+          format: double
+          description: 手续费
+          example: 0
+        close_profit:
+          type: number
+          format: double
+          description: 平仓盈亏
+          example: 0
+        position_profit:
+          type: number
+          format: double
+          description: 持仓盈亏
+          example: 0
+    Position:
+      type: object
+      properties:
+        fund_account_id:
+          type: string
+          description: 资金账户ID
+          example: '2020'
+        trading_day:
+          type: string
+          description: 交易日
+          example: '2020-01-01'
+        type:
+          type: string
+          description: 持仓类型。'1'=多头，'2'=空头
+          example: '1'
+        symbol:
+          type: string
+          description: 证券代码
+          example: 600000.SSE
+        initial:
+          type: integer
+          format: int32
+          description: 初始持仓
+          example: 10000
+        total:
+          type: integer
+          format: int32
+          description: 总持仓
+          example: 10100
+        available:
+          type: integer
+          format: int32
+          description: 可用持仓
+          example: 10000
+        buy_frozen:
+          type: integer
+          format: int32
+          description: 买入冻结
+          example: 100
+        sell_frozen:
+          type: integer
+          format: int32
+          description: 卖出冻结
+          example: 0
+        cost_price:
+          type: number
+          format: double
+          description: 成本价
+          example: 11.22
+    SubmitOrderSingleRequest:
+      type: object
+      properties:
+        symbol:
+          type: string
+          description: 证券代码
+          example: 600000.SSE
+        business:
+          type: string
+          description: 业务类型。'1'=普通交易，'2'=信用交易，'3'=债券质押式协议回购，'4'=网上发行认购
+          default: '1'
+        side:
+          type: string
+          description: 买卖方向。B=买入，S=卖出
+          example: B
+        price_type:
+          type: string
+          description: '价格类型。L=限价, M=市价'
+          default: L
+          example: L
+        price:
+          type: number
+          format: double
+          description: 申报价格。当price_type为'M'时可以不用指定。
+          example: 12.22
+        quantity:
+          type: integer
+          description: 申报数量
+          example: 100
+      required:
+        - symbol
+        - side
+        - quantity
+    SubmitOrderSingleResponse:
+      allOf:
+        - properties:
+            sts_order_id:
+              type: string
+              description: STS委托编号
+              example: '927'
+        - $ref: '#/components/schemas/Error'
+    SubmitOrderListRequest:
+      type: array
+      items:
+        type: object
+        properties:
+          symbol:
+            type: string
+            description: 证券代码
+            example: 600000.SSE
+          business:
+            type: string
+            description: 业务类型。'1'=普通交易，'2'=信用交易，'3'=债券质押式协议回购，'4'=网上发行认购
+            default: '1'
+          side:
+            type: string
+            description: 买卖方向。B=买入，S=卖出
+            example: B
+          price_type:
+            type: string
+            description: '价格类型。L=限价, M=市价'
+            default: L
+            example: L
+          price:
+            type: number
+            format: double
+            description: 申报价格。当price_type为'M'时可以不用指定。
+            example: 12.22
+          quantity:
+            type: integer
+            description: 申报数量
+            example: 100
+        required:
+          - symbol
+          - side
+          - quantity
+    SubmitOrderListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/SubmitOrderSingleResponse'
+    CancelOrderSingleResponse:
+      allOf:
+        - type: object
+          properties:
+            sts_order_id:
+              type: string
+              description: STS委托编号
+              example: '927'
+        - $ref: '#/components/schemas/Error'
+    CancelOrderListRequest:
+      type: array
+      items:
+        type: string
+        description: STS委托编号
+        example: '129'
+    CancelOrderListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/CancelOrderSingleResponse'
+    RiskPlan:
+      type: object
+      properties:
+        max_order_amount:
+          type: number
+          format: integer
+          example: 100000
+          description: 单笔报单最大金额
+        max_stock_value_percentage:
+          type: number
+          format: float
+          example: 1000000
+          description: 单股最大市值占比
+        max_cancel_ratio:
+          type: number
+          format: float
+          example: 0.2
+          description: 最大撤单比例
+        max_cancels:
+          type: number
+          format: integer
+          example: 1000
+          description: 最大撤单次数
+        max_orders_per_minute:
+          type: number
+          format: integer
+          example: 3000
+          description: 每分最大委托笔数
+        max_orders_per_second:
+          type: number
+          format: integer
+          example: 500
+          description: 每秒最大委托笔数
+        prevent_self_match:
+          type: boolean
+          example: true
+          description: 防止自成交
+        prevent_intraday_reversal:
+          type: boolean
+          example: true
+          description: 防止日内反向单
+    Error:
+      type: object
+      properties:
+        error_code:
+          type: integer
+          example: -1
+        error_text:
+          type: string
+          example: 此处应有错误发生
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    fund_account.id.path:
+      schema:
+        type: string
+      in: path
+      name: id
+      description: 资金账户ID
+      example: '2020'
+      required: true
+    fund_account_id.path:
+      schema:
+        type: string
+      in: path
+      name: fund_account_id
+      description: 资金账户ID
+      example: '2020'
+      required: true
+    username.path:
+      schema:
+        type: string
+      in: path
+      name: username
+      description: 用户名
+      example: toptrader
+      required: true
+    sts_order_id.path:
+      schema:
+        type: string
+      in: path
+      name: sts_order_id
+      description: STS委托编号
+      example: '23'
+      required: true
+    algo_id.path:
+      schema:
+        type: string
+      in: path
+      name: algo_id
+      description: 交易算法ID
+      example: '1'
+      required: true

@@ -1,0 +1,2603 @@
+openapi: 3.0.0
+info:
+  title: Rhino Gateway
+  version: '1.9'
+  description: 提供算法、委托、查询等服务。
+servers:
+  - url: 'http://localhost:6018'
+    description: test
+  - description: local
+    url: 'http://10.10.30.15:6018'
+  - url: 'http://192.168.1.236:6014'
+    description: test1
+tags:
+  - name: dms
+  - name: oms
+paths:
+  /funds:
+    parameters: []
+    get:
+      summary: 查询所有基金产品信息
+      operationId: QueryFunds
+      description: 查询所有基金产品信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Fund'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      tags:
+        - dms
+  /baskets:
+    post:
+      summary: 提交篮子
+      operationId: SubmitBasket
+      description: 创建篮子
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fund_code:
+                  type: string
+                  description: 基金代码
+                name:
+                  type: string
+                  description: 篮子名称
+                said:
+                  type: string
+                  description: 策略账号
+                baid:
+                  type: string
+                  description: 经纪账号，可选字段
+                algo_name:
+                  type: string
+                  description: '算法名称, 内部算法: rhino.TWAP, 私有化卡方算法: kafang.TWAP_Plus'
+                algo_config:
+                  type: string
+                  description: '算法配置名称，内部算法:rhino.TWAP目前支持算法配置c1,私有化卡方算法无需填写'
+                begin_time:
+                  type: string
+                  description: '开始时间; HH:MM:SS'
+                end_time:
+                  type: string
+                  description: '停止时间; HH:MM:SS'
+                remark:
+                  type: string
+                  description: 篮子备注
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      symbol:
+                        type: string
+                        description: 证券代码
+                      business:
+                        type: string
+                        description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+                      side:
+                        type: string
+                        description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+                      quantity:
+                        type: integer
+                        description: 数量
+                      remark:
+                        type: string
+                        description: 备注
+              required:
+                - fund_code
+                - name
+                - said
+                - items
+            examples: {}
+        description: ''
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fund_id:
+                    type: integer
+                    description: 基金编码
+                  fund_code:
+                    type: string
+                    description: 基金代码
+                  name:
+                    type: string
+                    description: 篮子名称
+                  said:
+                    type: string
+                    description: 策略账号
+                  baid:
+                    type: string
+                    description: 经纪账号，可选字段
+                  algo_name:
+                    type: string
+                    description: 算法名称
+                  algo_config:
+                    type: string
+                    description: 算法配置名称
+                  begin_time:
+                    type: string
+                    description: '开始时间; HH:MM:SS'
+                  end_time:
+                    type: string
+                    description: '停止时间; HH:MM:SS'
+                  basket_id:
+                    type: string
+                    description: 篮子编号
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        error_code:
+                          type: integer
+                          description: 错误代码
+                        error_text:
+                          type: string
+                          description: 错误信息
+                        symbol:
+                          type: string
+                          description: 证券代码
+                        business:
+                          type: string
+                          description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+                        side:
+                          type: string
+                          description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+                        quantity:
+                          type: integer
+                          description: 数量
+                        remark:
+                          type: string
+                          description: 备注
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+      tags:
+        - oms
+    parameters: []
+    get:
+      summary: 查询篮子信息
+      operationId: QueryBaskets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Basket'
+              examples: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: |-
+        根据指定参数获取篮子信息。仅支持按以下参数组合查询：
+
+        * `fund_id`: 查询指定基金的所有篮子信息
+        * `fund_id`+`said`: 查询指定基金的策略账户的篮子信息
+        * `fund_id`+`id`: 查询指定基金的指定篮子编号的状态信息
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: said
+          description: 策略账号
+        - schema:
+            type: string
+          in: query
+          name: id
+          description: 篮子编号
+      tags:
+        - dms
+  '/baskets/{basket_id}':
+    parameters:
+      - name: basket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '340'
+        description: 篮子编号
+    delete:
+      summary: 撤销篮子
+      operationId: CancelBasket
+      responses:
+        '204':
+          description: No Content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fund_id:
+                    type: string
+                    description: 基金编号
+                  fund_code:
+                    type: string
+                    description: 基金代码
+                  basket_id:
+                    type: string
+                    description: 篮子编号
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: |-
+        撤销篮子
+
+        * basket_id表示篮子编号，不包含算法编号
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          required: true
+          description: 基金编号
+        - schema:
+            type: string
+          in: query
+          name: fund_code
+          description: 基金代码
+          required: true
+      tags:
+        - oms
+  /orders:
+    parameters: []
+    get:
+      summary: 获取委托信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - items:
+                      $ref: '#/components/schemas/StockOrder'
+                  - items:
+                      $ref: '#/components/schemas/FutureOrder'
+                type: array
+              examples: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetOrders
+      description: |-
+        根据指定参数获取委托信息。仅支持按以下参数组合查询：
+
+        * `fund_id`+`baid`: 查询指定基金和经纪账户的委托信息
+        * `fund_id`+`said`+`target`: 查询指定基金的策略账户的标的委托信息
+        * `fund_id`+`said`+`remark`: 查询指定基金的策略账户中，remark值相同的委托信息
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: integer
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: said
+          description: 策略账号
+        - schema:
+            type: string
+          in: query
+          name: remark
+          description: 委托备注
+        - schema:
+            type: string
+          in: query
+          name: baid
+          description: 经纪账号
+        - schema:
+            type: string
+            enum:
+              - stock
+              - future
+          in: query
+          name: target
+          description: 投资标的
+      tags:
+        - dms
+    post:
+      summary: 申报委托
+      operationId: SubmitOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    error_code:
+                      description: 错误码
+                      type: integer
+                    error_text:
+                      type: string
+                      description: 错误信息
+                    symbol:
+                      type: string
+                      description: 证券代码
+                    business:
+                      type: string
+                      description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+                    side:
+                      type: string
+                      description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+                    price_type:
+                      type: string
+                      description: '价格类型。"L"=限价, "N"=最新价, "M"=市价, "A1"=卖1价, "A2"=卖2价, "A3"=卖3价, "A4"=卖4价, "A5"=卖5价, "A6"=卖6价, "A7"=卖7价, "A8"=卖8价, "A9"=卖9价, "A10"=卖10价, "B1"=买1价, "B2"=买2价, "B3"=买3价, "B4"=买4价, "B5"=买5价, "B6"=买6价, "B7"=买7价, "B8"=买8价, "B9"=买9价, "B10"=买10价'
+                    price:
+                      type: number
+                    quantity:
+                      description: 数量
+                      type: integer
+                    remark:
+                      type: string
+                      description: 备注
+                    ids:
+                      type: array
+                      description: 委托编号，不指定经纪账户时，存在多个委托编号返回，每个编号表示经纪账户所下委托
+                      items:
+                        type: string
+              examples: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 申报委托
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fund_code:
+                  type: string
+                  description: 基金代码
+                said:
+                  type: string
+                  description: 策略账号
+                baid:
+                  type: string
+                  description: 经纪账号。在指定的经纪账户上交易，为空表示自动选择经纪账号。
+                items:
+                  oneOf:
+                    - items:
+                        type: object
+                        properties:
+                          symbol:
+                            type: string
+                            description: 证券代码
+                          business:
+                            type: string
+                            description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+                          side:
+                            type: string
+                            description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+                          price_type:
+                            type: string
+                            description: '价格类型。"L"=限价, "N"=最新价, "M"=市价, "A1"=卖1价, "A2"=卖2价, "A3"=卖3价, "A4"=卖4价, "A5"=卖5价, "A6"=卖6价, "A7"=卖7价, "A8"=卖8价, "A9"=卖9价, "A10"=卖10价, "B1"=买1价, "B2"=买2价, "B3"=买3价, "B4"=买4价, "B5"=买5价, "B6"=买6价, "B7"=买7价, "B8"=买8价, "B9"=买9价, "B10"=买10价'
+                          price:
+                            type: number
+                          quantity:
+                            description: 数量
+                            type: integer
+                          remark:
+                            type: string
+                            description: 备注
+                    - items:
+                        type: object
+                        properties:
+                          symbol:
+                            type: string
+                            description: 证券代码
+                          offset:
+                            type: string
+                            description: 开平标志
+                          side:
+                            type: string
+                            description: 买卖方向
+                          hedge:
+                            type: string
+                            description: 投机套保标志
+                          price_type:
+                            type: string
+                            description: 价格类型
+                          price:
+                            description: 价格
+                            type: number
+                          quantity:
+                            description: 数量
+                            type: integer
+                          remark:
+                            type: string
+                            description: 备注
+                  type: array
+              required:
+                - fund_code
+                - said
+                - items
+            examples: {}
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+      tags:
+        - oms
+  /matches:
+    parameters: []
+    get:
+      summary: 获取成交信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - items:
+                      $ref: '#/components/schemas/StockMatch'
+                  - items:
+                      $ref: '#/components/schemas/FutureMatch'
+                type: array
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetMatches
+      description: |-
+        根据指定参数获取成交信息。仅支持按以下参数组合查询：
+
+        * `fund_id`+`baid`: 查询指定基金和经纪账户的成交信息
+        * `fund_id`+`said`+`target`: 查询指定基金的策略账户的标的成交信息
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: said
+          description: 策略账号
+        - schema:
+            type: string
+          in: query
+          name: baid
+          description: 经纪账号
+        - schema:
+            type: string
+            enum:
+              - stock
+              - future
+          in: query
+          name: target
+          description: 投资标的
+      tags:
+        - dms
+  /cancels:
+    parameters: []
+    get:
+      summary: 获取撤单信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - items:
+                      $ref: '#/components/schemas/StockCancel'
+                  - items:
+                      $ref: '#/components/schemas/FutureCancel'
+                type: array
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetCancels
+      description: |-
+        根据指定参数获取撤单信息。仅支持按以下参数组合查询：
+
+        * `fund_id`+`baid`: 查询指定基金和经纪账户的撤单信息
+        * `fund_id`+`said`+`target`: 查询指定基金的策略账户的标的撤单信息
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: said
+          description: 策略账号
+        - schema:
+            type: string
+          in: query
+          name: baid
+          description: 经纪账号
+        - schema:
+            type: string
+            enum:
+              - stock
+              - future
+          in: query
+          name: target
+          description: 投资标的
+      tags:
+        - dms
+    post:
+      summary: 委托撤单
+      operationId: CancelOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    error_code:
+                      type: string
+                      description: 错误代码
+                    error_text:
+                      type: string
+                      description: 错误信息
+                    id:
+                      type: string
+                      description: 委托编号
+              examples: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 支持同时撤销指定基金中的多笔委托。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fund_code:
+                  type: string
+                  description: 基金代码
+                ids:
+                  type: array
+                  description: 委托编号
+                  items:
+                    type: string
+              required:
+                - fund_code
+                - ids
+            examples: {}
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+      tags:
+        - oms
+  /positions:
+    parameters: []
+    get:
+      summary: 获取持仓信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/StockBrokerPosition'
+                    - $ref: '#/components/schemas/StockStrategyPosition'
+                    - $ref: '#/components/schemas/FuturePosition'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetPositions
+      description: |-
+        根据指定参数获取持仓信息。仅支持按以下参数组合查询：
+
+        * `fund_id`+`dimension`: 按指定维度查询所有资产信息
+        * `fund_id`+`baid`: 查询指定基金和经纪账户的持仓信息
+        * `fund_id`+`said`+`target`: 查询指定基金的策略账户的标的持仓信息
+        * 默认查询指定基金下的所有策略账户的所有持仓信息
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: said
+          description: 策略账号
+        - schema:
+            type: string
+          in: query
+          name: baid
+          description: 经纪账号
+        - schema:
+            type: string
+            enum:
+              - stock
+              - future
+          in: query
+          name: target
+          description: 投资标的
+        - schema:
+            type: string
+            enum:
+              - broker_account
+              - strategy
+          in: query
+          name: standard
+          description: 分类标准
+      tags:
+        - dms
+  /assets:
+    parameters: []
+    get:
+      summary: 获取资金信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - $ref: '#/components/schemas/StockBrokerAsset'
+                    - $ref: '#/components/schemas/StockStrategyAsset'
+                    - $ref: '#/components/schemas/FutureAsset'
+              examples: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetAssets
+      description: |-
+        根据指定参数获取资金信息。仅支持按以下参数组合查询：
+
+        * `fund_id`+`standard`: 按指定维度查询所有资产信息
+        * `fund_id`+`baid`: 查询指定基金和经纪账户的资产信息
+        * `fund_id`+`said`+`target`: 查询指定基金的策略账户的标的资产信息
+        * 默认查询指定基金下的所有策略账户的所有资产信息
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: said
+          description: 策略账号
+        - schema:
+            type: string
+            enum:
+              - stock
+              - future
+          in: query
+          name: target
+          description: 投资标的
+        - schema:
+            type: string
+          in: query
+          name: baid
+          description: 经纪账号
+        - schema:
+            type: string
+            enum:
+              - broker_account
+              - strategy
+          in: query
+          name: standard
+          description: 分类标准
+      tags:
+        - dms
+  /cash_transfers:
+    parameters: []
+    get:
+      summary: 查询产品资金划转信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CashTransfer'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: QueryCashTransfers
+      description: 查询之间的资金划转记录
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: account_category
+          description: 账户类型，strategy_account表示策略账户、broker_account表示经纪账户，不填写表示查询策略账户
+          required: true
+      tags:
+        - dms
+    post:
+      summary: 资金划转
+      operationId: CashTransfer
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fund_id:
+                    type: string
+                    description: 基金ID
+                  fund_code:
+                    type: string
+                    description: 基金代码
+                  id:
+                    type: string
+                    description: 划转编号
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 指定基金内，在账户间进行资金划转
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_category:
+                  type: string
+                  description: '账户类型。strategy_account: 策略账户，broker_account: 经纪账户'
+                fund_code:
+                  type: string
+                  description: 基金代码
+                sender:
+                  type: string
+                  description: 发送方。
+                receiver:
+                  type: string
+                  description: 接收方。
+                amount:
+                  type: number
+                  description: 金额。必须大于0。
+                remark:
+                  type: string
+                  description: 备注
+              required:
+                - fund_code
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+      tags:
+        - oms
+  basket_states:
+    get:
+      summary: 查询篮子状态信息
+      tags:
+        - oms
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BasketState'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetBasketStates
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: said
+          description: 策略账号
+        - schema:
+            type: string
+          in: query
+          name: id
+          description: 篮子编号
+      description: |-
+        根据指定参数获取篮子状态信息。仅支持按以下参数组合查询：
+
+        * `fund_id`+`said`: 查询指定基金的策略账户的篮子状态信息
+        * `fund_id`+`id`: 查询指定基金的指定篮子编号的状态信息
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+    parameters: []
+  /broker_accounts:
+    get:
+      summary: 获取经纪账户信息
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/StockBrokerAccount'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetBrokerAccounts
+      description: |-
+        根据指定参数获取经纪账户信息。仅支持按以下参数组合查询：
+
+        * `fund_id`: 查询基金的所有资金账户信息
+        * `fund_id`+`baid`: 查询基金指定经纪账户信息
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: baid
+          description: 经纪账号
+    parameters: []
+  '/baskets/{basket_id}/items/{symbol}':
+    parameters:
+      - schema:
+          type: string
+        name: symbol
+        in: path
+        required: true
+      - schema:
+          type: string
+        name: basket_id
+        in: path
+        required: true
+    delete:
+      summary: 撤销篮子股票
+      operationId: CancelBasketItem
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fund_id:
+                    type: string
+                    description: 基金编号
+                  fund_code:
+                    type: string
+                    description: 基金代码
+                  basket_id:
+                    type: string
+                    description: 篮子编号
+                  symbol:
+                    type: string
+                    description: 股票代码
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: |-
+        撤销篮子股票
+
+        * basket_id表示篮子编号，不包含算法编号
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: fund_code
+          description: 基金代码
+          required: true
+      tags:
+        - oms
+  /algo_configs:
+    get:
+      summary: 查询算法配置信息
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    algo_name:
+                      type: string
+                      description: 算法名称
+                    config_name:
+                      type: string
+                      description: 配置名称
+                    detail:
+                      $ref: '#/components/schemas/Twap'
+      operationId: GetAlgoConfigs
+      description: 查询算法配置信息
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金编号
+          required: true
+  /order_routing_rules:
+    get:
+      summary: 获取委托路由规则
+      tags:
+        - oms
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderRoutingRule'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetOrderRoutingRules
+      description: 获取委托路由规则
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          required: true
+          description: 基金ID
+        - schema:
+            type: string
+          in: query
+          name: fund_code
+          description: 基金代码
+          required: true
+    post:
+      summary: 创建委托路由规则
+      operationId: CreateOrderRoutingRule
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: 唯一标识
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 创建委托路由规则
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金ID
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fund_code:
+                  type: string
+                  description: 基金代码
+                said:
+                  type: string
+                  description: 策略账号
+                baid:
+                  type: string
+                  description: 经纪账号
+                begin_time:
+                  type: string
+                  description: '开始时间：HH:MM:SS'
+                end_time:
+                  type: string
+                  description: '停止时间：HH:MM:SS'
+  '/order_routing_rules/{rule_id}':
+    parameters:
+      - schema:
+          type: string
+        name: rule_id
+        in: path
+        required: true
+    delete:
+      summary: 删除委托路由规则
+      operationId: DeleteOrderRoutingRules
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: 唯一标识
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 删除委托路由规则
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金ID
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: fund_code
+          description: 基金代码
+          required: true
+      tags:
+        - oms
+  '/baskets/{basket_id}/restart':
+    parameters:
+      - schema:
+          type: string
+        name: basket_id
+        in: path
+        required: true
+    post:
+      summary: 重启算法
+      operationId: RestartBasket
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fund_id:
+                    type: string
+                    description: 基金编号
+                  fund_code:
+                    type: string
+                    description: 基金代码
+                  basket_id:
+                    type: string
+                    description: 篮子编号
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 算法重启
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_id
+          description: 基金ID
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: fund_code
+          description: 基金代码
+          required: true
+      tags:
+        - ams
+components:
+  schemas:
+    Error:
+      title: Error
+      type: object
+      description: ''
+      x-examples: {}
+      properties:
+        code:
+          type: integer
+          description: 错误编号
+          example: -1
+        text:
+          type: string
+          description: 错误文本
+    StockOrder:
+      title: StockOrder
+      type: object
+      description: ''
+      properties:
+        id:
+          type: string
+          description: 委托编号。交易日+基金唯一确定一笔委托，从1开始编号。
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          description: 基金代码
+          type: string
+        baid:
+          description: 经纪账号
+          type: string
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        order_id:
+          type: string
+          description: 委托编号
+        symbol:
+          type: string
+          description: 证券代码
+        business:
+          type: string
+          description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+        side:
+          type: string
+          description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+        price_type:
+          type: string
+          description: '价格类型。"L"=限价, "N"=最新价, "M"=市价, "A1"=卖1价, "A2"=卖2价, "A3"=卖3价, "A4"=卖4价, "A5"=卖5价, "A6"=卖6价, "A7"=卖7价, "A8"=卖8价, "A9"=卖9价, "A10"=卖10价, "B1"=买1价, "B2"=买2价, "B3"=买3价, "B4"=买4价, "B5"=买5价, "B6"=买6价, "B7"=买7价, "B8"=买8价, "B9"=买9价, "B10"=买10价'
+        price:
+          description: 委托价格
+          type: number
+        quantity:
+          description: 委托数量
+          type: integer
+        sts_order_id:
+          type: string
+          description: STS委托编号
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+        average_price:
+          description: 成交均价
+          type: number
+        filled_quantity:
+          description: 成交数量
+          type: integer
+        leaves_quantity:
+          description: 剩余数量
+          type: integer
+        frozen_fee:
+          description: 冻结的交易费用（在委托时生成，之后不会随着成交发生变化）
+          type: number
+        fee:
+          description: 交易费用
+          type: number
+        status:
+          type: string
+          description: '委托状态。"1"=待报, "2"=已报, "3"=待撤, "4"=部分成交, "5"=部成待撤, "6"=部成已撤, "F"=已成, "C"=已撤, "R"=废单'
+        done:
+          description: 是否完成（只有当委托状态处于已撤/已成/废单时，才算完成)
+          type: boolean
+        error_code:
+          description: 错误代码
+          type: integer
+        error_text:
+          type: string
+          description: 错误文本
+        source:
+          type: string
+          description: 委托来源。用于标识客户端版本信息。
+        remark:
+          type: string
+          description: 委托备注。由用户指定。
+        accept_time:
+          type: string
+          description: '本地收到时间 HH:MM:SS.ssssss'
+        submit_time:
+          type: string
+          description: '本地提交到STS时间 HH:MM:SS.ssssss'
+        update_time:
+          type: string
+          description: '更新时间 HH:MM:SS.ssssss'
+        sts_recv_time:
+          type: string
+          description: 'STS收到时间 HH:MM:SS.ssssss'
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        upate_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    StockMatch:
+      title: StockMatch
+      type: object
+      properties:
+        id:
+          type: string
+          description: 成交编号。交易日+基金+经纪账号可唯一确定一笔成交，由交易所确定其值。
+        fund_id:
+          description: 基金编号
+          type: integer
+        fund_code:
+          type: string
+          description: 基金代码
+        baid:
+          type: string
+          description: 经纪账号
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        order_id:
+          type: string
+          description: 委托编号
+        sts_order_id:
+          type: string
+          description: STS委托编号。为空表示外部委托。
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+        symbol:
+          type: string
+          description: 证券代码
+        business:
+          type: string
+          description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+        side:
+          type: string
+          description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+        price:
+          description: 成交价
+          type: number
+        quantity:
+          description: 成交数量
+          type: integer
+        trade_time:
+          type: string
+          description: '成交时间 HH:MM:SS.ssssss'
+        recv_time:
+          type: string
+          description: '本地收到时间 HH:MM:SS.ssssss'
+        sts_recv_time:
+          type: string
+          description: 'STS收到时间 HH:MM:SS.ssssss'
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        upate_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    StockCancel:
+      title: StockCancel
+      type: object
+      properties:
+        id:
+          type: string
+          description: 撤单编号
+        fund_id:
+          description: 基金编号
+          type: integer
+        fund_code:
+          type: string
+          description: 基金代码
+        baid:
+          type: string
+          description: 经纪账号
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        order_id:
+          type: string
+          description: 委托编号
+        sts_order_id:
+          type: string
+          description: STS委托编号
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+        symbol:
+          type: string
+          description: 证券代码
+        business:
+          type: string
+          description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+        side:
+          type: string
+          description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+        quantity:
+          description: 撤单数量
+          type: integer
+        fee:
+          description: 交易费用
+          type: number
+        error_code:
+          type: string
+          description: 错误代码
+        error_text:
+          type: string
+          description: 错误文本
+        cancel_time:
+          type: string
+          description: '撤单时间 HH:MM:SS.ssssss。这个值可能来自交易所发出的，也有可能来自柜台或STS'
+        recv_time:
+          type: string
+          description: '本地收到时间 HH:MM:SS.ssssss'
+        sts_recv_time:
+          type: string
+          description: 'STS收到时间 HH:MM:SS.ssssss'
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    StockStrategyPosition:
+      title: StockStrategyPosition
+      type: object
+      properties:
+        fund_id:
+          description: 基金编号
+          type: integer
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        symbol:
+          type: string
+          description: 证券代码
+        type:
+          type: string
+          description: 持仓类型。"1"=多头，"2"=空头
+        initial:
+          description: 期初持仓
+          type: integer
+        total:
+          description: 实时总持仓
+          type: integer
+        available:
+          description: 可用持仓
+          type: integer
+        buy_frozen:
+          description: 买入冻结
+          type: integer
+        sell_frozen:
+          description: 卖出冻结
+          type: integer
+        cost_price:
+          description: 成本价
+          type: number
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    StockStrategyAsset:
+      title: StockStrategyAsset
+      type: object
+      properties:
+        fund_id:
+          description: 基金编号
+          type: integer
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          type: string
+          description: 策略账号
+        trading_day:
+          type: string
+          description: 交易日
+        initial_asset:
+          description: '期初总资产: 可用资金+持仓市值+现金分红'
+          type: number
+        initial_cash:
+          description: 期初可用
+          type: number
+        total_asset:
+          description: '总资产: 可用资金+冻结资金+持仓市值+预留资金+现金分红'
+          type: number
+        available_cash:
+          description: 可用资金
+          type: number
+        frozen_cash:
+          description: 冻结资金，交易成本+冻结费用
+          type: number
+        position_value:
+          description: 持仓市值
+          type: number
+        deposit:
+          description: 入金金额
+          type: number
+        withdraw:
+          description: 出金金额
+          type: number
+        frozen_fee:
+          description: 冻结费用
+          type: number
+        fee:
+          description: 交易费用
+          type: number
+        close_profit:
+          description: 平仓盈亏
+          type: number
+        position_profit:
+          description: 持仓盈亏
+          type: number
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    StockBrokerPosition:
+      title: StockBrokerPosition
+      type: object
+      properties:
+        fund_id:
+          description: 基金编号
+          type: integer
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        symbol:
+          type: string
+          description: 证券代码
+        type:
+          type: string
+          description: 持仓类型。"1"=多头，"2"=空头
+        initial:
+          description: '期货持仓: 开盘前的总持仓'
+          type: integer
+        total:
+          description: 总持仓
+          type: integer
+        available:
+          description: 可用持仓
+          type: integer
+        buy_frozen:
+          description: 买入冻结
+          type: integer
+        sell_frozen:
+          description: 卖出冻结
+          type: integer
+        cost_price:
+          description: 成本价
+          type: number
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+        baid:
+          type: string
+          description: 经纪账号
+    StockBrokerAsset:
+      title: StockBrokerAsset
+      type: object
+      properties:
+        fund_id:
+          description: 基金编号
+          type: integer
+        fund_code:
+          type: string
+          description: 基金代码
+        baid:
+          type: string
+          description: 经纪账号
+        trading_day:
+          type: string
+          description: 交易日
+        initial_asset:
+          description: '期初总资产: 开盘前的总资产'
+          type: number
+        initial_cash:
+          description: '期初可用: 开盘前的可用资金'
+          type: number
+        total_asset:
+          description: '总资产: 可用资金+冻结资金+预留资金+现金分红+持仓市值'
+          type: number
+        available_cash:
+          description: 可用资金
+          type: number
+        frozen_cash:
+          description: '冻结资金: 冻结交易成本+冻结费用'
+          type: number
+        reserved_cash:
+          description: 预留资金。不会用于交易，主要用于赎回金额。
+          type: number
+        dividend_cash:
+          description: 现金分红
+          type: number
+        position_value:
+          description: 持仓市值
+          type: number
+        deposit:
+          description: 入金金额
+          type: number
+        withdraw:
+          description: 出金金额
+          type: number
+        fee:
+          description: 交易费用
+          type: number
+        close_profit:
+          description: 平仓盈亏
+          type: number
+        position_profit:
+          description: 持仓盈亏
+          type: number
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    Fund:
+      title: Fund
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Rhino维护的ID，系统内可唯一标识一支基金。
+        code:
+          type: string
+          description: 基金业协会备案的代码。唯一标识一支基金。
+        name:
+          type: string
+          description: 基金业协会备案的名称
+        enable:
+          type: boolean
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    StockBrokerAccount:
+      title: StockBrokerAccount
+      type: object
+      properties:
+        id:
+          type: string
+          description: 资金账号。
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          type: string
+          description: 协会备案的基金代码
+        target:
+          type: string
+          description: '投资标的。"stock"=股票, "future"=期货'
+        broker_name:
+          type: string
+          description: 经纪商名称
+        enable:
+          type: boolean
+          description: 是否启用
+        credit:
+          type: boolean
+          description: 是否为信用账户
+        sse_shareholder_id:
+          type: string
+          description: 上海股东卡号
+        sze_shareholder_id:
+          type: string
+          description: 深圳股东卡号
+        commission_rate:
+          type: number
+          description: 手续费率
+        stamp_duty_rate:
+          type: number
+          description: 印花税率
+        transfer_rate:
+          type: number
+          description: 过户费率
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    CashTransfer:
+      title: CashTransfer
+      type: object
+      properties:
+        id:
+          type: string
+          description: 划转编号
+        fund_id:
+          type: string
+          description: 基金编号
+        sender:
+          description: 出让方
+          type: string
+        receiver:
+          description: 接收方
+          type: string
+        amount:
+          type: number
+          description: 划转金额
+        remark:
+          type: string
+          description: 备注
+        occurred_date:
+          type: string
+          description: 发生日期 YYYY-MM-DD
+        occurred_time:
+          type: string
+          description: '发生时间 HH:MM:SS.ssssss'
+    StockStrategyPositionTransfer:
+      title: StockStrategyPositionTransfer
+      x-examples: {}
+      type: object
+      description: ''
+      properties:
+        transaction_no:
+          type: string
+          description: 交易编号。日内唯一。
+        fund_id:
+          type: string
+          description: 基金编号
+        sender:
+          description: 发送方
+          type: string
+        receiver:
+          description: 接收方
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+                description: 股票代码
+              quantity:
+                type: integer
+                description: 数量
+              cost_price:
+                type: number
+                description: 成本价
+        remark:
+          type: string
+          description: 备注
+        occurred_date:
+          type: string
+          description: 发生日期 YYYY-MM-DD
+        occurred_time:
+          type: string
+          description: '发生时间 HH:MM:SS.ssssss'
+    FutureOrder:
+      title: FutureOrder
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 唯一标识编号
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        order_id:
+          type: string
+          description: 委托编号
+        symbol:
+          type: string
+          description: 证券代码
+        offset:
+          type: string
+          description: 开平标志
+        side:
+          type: string
+          description: 买卖方向
+        hedge:
+          type: string
+          description: 投机套保标志
+        price_type:
+          type: string
+          description: 价格类型
+        price:
+          type: number
+          description: 委托价格
+        quantity:
+          type: integer
+          description: 委托数量
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+        average_price:
+          type: number
+          description: 成交均价
+        filled_quantity:
+          type: integer
+          description: 成交数量
+        leaves_quantity:
+          type: integer
+          description: 剩余数量
+        status:
+          type: string
+          description: 委托状态
+        done:
+          type: boolean
+          description: 是否完成（只有当委托状态处于已撤/已成/废单时，才算完成)
+        error_code:
+          type: integer
+          description: 错误代码
+        error_text:
+          type: string
+          description: 错误文本
+        source:
+          type: string
+          description: 委托来源
+        accept_time:
+          type: string
+          description: '本地收到时间 HH:MM:SS.ssssss'
+        submit_time:
+          type: string
+          description: '本地提交到STS时间 HH:MM:SS.ssssss'
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+        baid:
+          type: string
+          description: 经纪账号
+        sts_order_id:
+          type: string
+          description: STS委托编号
+        sts_accept_time:
+          type: string
+          description: 'STS收到时间 HH:MM:SS.ssssss'
+        sts_recv_time:
+          type: string
+          description: 'STS收到时间 HH:MM:SS.ssssss'
+        broker_insert_time:
+          type: string
+          description: '柜台提交时间 HH:MM:SS.ssssss'
+        broker_update_time:
+          type: string
+          description: '柜台更新时间 HH:MM:SS.ssssss'
+        sts_submit_time:
+          type: string
+          description: 'STS提交到柜台时间 HH:MM:SS.ssssss'
+    FutureMatch:
+      title: FutureMatch
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 唯一标识ID
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        order_id:
+          type: string
+          description: 委托编号
+        symbol:
+          type: string
+          description: 证券代码
+        offset:
+          type: string
+          description: 开平标志
+        side:
+          type: string
+          description: 买卖方向
+        hedge:
+          type: string
+          description: 投机套保标志
+        match_id:
+          type: string
+          description: 成交编号
+        price:
+          type: number
+          description: 成交价
+        quantity:
+          type: integer
+          description: 成交数量
+        match_time:
+          type: string
+          description: '柜台成交时间 HH:MM:SS.ssssss'
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+        cli_order_id:
+          type: string
+          description: 本地委托编号
+        baid:
+          type: string
+          description: 经纪账号
+        sts_order_id:
+          type: string
+          description: STS委托编号
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+        sts_recv_time:
+          type: string
+          description: 'STS收到时间 HH:MM:SS.ssssss'
+    FuturePosition:
+      title: FuturePosition
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 唯一标识ID
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        symbol:
+          type: string
+          description: 证券代码
+        type:
+          type: string
+          description: 持仓类型
+        hedge:
+          type: string
+          description: 投机套保类型
+        position_date:
+          type: string
+          description: 持仓日期
+        yd_position:
+          type: integer
+          description: 上日持仓
+        position:
+          type: integer
+          description: 今日持仓
+        long_frozen:
+          type: integer
+          description: 多头冻结
+        short_frozen:
+          type: integer
+          description: 空头冻结
+        long_frozen_amount:
+          type: number
+          description: 开仓冻结金额
+        short_frozen_amount:
+          type: number
+          description: ''
+        open_volume:
+          type: integer
+          description: 开仓量
+        close_colume:
+          type: integer
+          description: 平仓量
+        open_amount:
+          type: number
+          description: 开仓金额
+        close_amount:
+          type: number
+          description: 平仓金额
+        position_cost:
+          type: number
+          description: 持仓成本
+        pre_margin:
+          type: number
+          description: 上次占用的保证金
+        use_margin:
+          type: number
+          description: 占用的保证金
+        frozen_margin:
+          type: number
+          description: 冻结的保证金
+        frozen_cash:
+          type: number
+          description: 冻结的资金
+        frozen_commision:
+          type: number
+          description: 冻结的手续费
+        cash_in:
+          type: number
+          description: 资金差额
+        commision:
+          type: number
+          description: 手续费
+        close_profit:
+          type: number
+          description: 平仓盈亏
+        position_profit:
+          type: number
+          description: 持仓盈亏
+        pre_settlement_price:
+          type: number
+          description: 上次结算价
+        settlement_price:
+          type: number
+          description: 本次结算价
+        open_cost:
+          type: number
+          description: 开仓成本
+        exchange_margin:
+          type: number
+          description: 交易所保证金
+        comb_position:
+          type: integer
+          description: 组合成交形成的持仓
+        comb_long_frozen:
+          type: integer
+          description: 组合多头冻结
+        comb_short_frozen:
+          type: integer
+          description: 组合空头冻结
+        close_profit_by_date:
+          type: number
+          description: 逐日盯市平仓盈亏
+        close_profit_by_trade:
+          type: number
+          description: 逐笔对冲平仓盈亏
+        today_position:
+          type: integer
+          description: 今日持仓
+        margin_rate_by_money:
+          type: number
+          description: 保证金率
+        margin_rate_by_volume:
+          type: number
+          description: 保证金率(按手数)
+        strike_frozen:
+          type: integer
+          description: 执行冻结
+        strike_frozen_amount:
+          type: number
+          description: 执行冻结金额
+        abandon_frozen:
+          type: integer
+          description: 放弃执行冻结
+        yd_strike_frozen:
+          type: integer
+          description: 执行冻结的昨仓
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+        baid:
+          type: string
+          description: 经纪账号
+    FutureAsset:
+      title: FutureAsset
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 唯一标识ID
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        pre_mortgage:
+          type: number
+          description: 上次质押金额
+        'pre_credit ':
+          type: number
+          description: 上次信用额度
+        pre_deposit:
+          type: number
+          description: 上次存款额
+        pre_balance:
+          type: number
+          description: 上次结算准备金
+        pre_margin:
+          type: number
+          description: 上次占用的保证金
+        interest_base:
+          type: number
+          description: 利息基数
+        interest:
+          type: number
+          description: 利息收入
+        deposit:
+          type: number
+          description: 入金金额
+        withdraw:
+          type: number
+          description: 出金金额
+        frozen_margin:
+          type: number
+          description: 冻结的保证金
+        frozen_cash:
+          type: number
+          description: 冻结的资金
+        frozen_commission:
+          type: number
+          description: 冻结的手续费
+        curr_margin:
+          type: number
+          description: 当前保证金总额
+        cash_in:
+          type: number
+          description: 资金差额
+        commision:
+          type: number
+          description: 手续费
+        close_profit:
+          type: number
+          description: 平仓盈亏
+        position_profit:
+          type: number
+          description: 持仓盈亏
+        balance:
+          type: number
+          description: 期货结算准备金
+        available:
+          type: number
+          description: 可用资金
+        withdraw_quota:
+          type: number
+          description: 可取资金
+        reserve:
+          type: number
+          description: 基本准备金
+        credit:
+          type: number
+          description: 信用额度
+        mortgage:
+          type: number
+          description: 质押金额
+        exchange_margin:
+          type: number
+          description: 交易所保证金
+        delivery_margin:
+          type: number
+          description: 投资者交割保证金
+        exchange_delivery_margin:
+          type: number
+          description: 交易所交割保证金
+        reserve_balance:
+          type: number
+          description: 保底期货结算准备金
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+        baid:
+          type: string
+          description: 经纪账号
+    FutureCancel:
+      title: FutureCancel
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 唯一标识ID
+        fund_id:
+          description: 基金编号
+          type: integer
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          description: 策略账号
+          type: string
+        trading_day:
+          type: string
+          description: 交易日
+        order_id:
+          type: string
+          description: 委托编号
+        symbol:
+          type: string
+          description: 证券代码
+        offset:
+          type: string
+          description: 开平标志
+        hedge:
+          type: string
+          description: 投机套保标志
+        match_id:
+          type: string
+          description: 撤单编号
+        price:
+          description: 撤单数量
+          type: number
+        quantity:
+          description: 错误代码
+          type: integer
+        match_time:
+          type: string
+          description: 错误文本
+        recv_time:
+          type: string
+          description: '本地收到时间 HH:MM:SS.ssssss'
+        side:
+          type: string
+          description: 买卖方向
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+        cli_order_id:
+          type: string
+          description: 本地委托编号
+        baid:
+          type: string
+          description: 经纪账号
+        sts_order_id:
+          type: string
+          description: STS委托编号
+        broker_order_id:
+          type: string
+          description: 柜台委托编号
+        sts_recv_time:
+          type: string
+          description: 'STS收到时间 HH:MM:SS.ssssss'
+    BasketItem:
+      title: BasketItem
+      type: object
+      properties:
+        basket_id:
+          type: string
+          description: 篮子编号
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          type: string
+          description: 基金代码
+        symbol:
+          type: string
+          description: 证券代码
+        business:
+          type: string
+          description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+        side:
+          type: string
+          description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+        target_quantity:
+          type: integer
+          description: 目标数量
+        filled_quantity:
+          type: integer
+          description: 成交数量
+        status:
+          type: string
+          description: '状态（1: 未开始，2: 执行中 3: 撤销中 4: 已拒绝 5: 已撤销 6: 已完成）'
+        remark:
+          type: string
+          description: 备注(由用户指定)
+        message:
+          type: string
+          description: 消息(由服务端设置)
+        submit_time:
+          type: string
+          description: '提交篮子时间，15:04:05.999'
+        cancel_time:
+          type: string
+          description: '撤销篮子时间，15:04:05.999'
+    Basket:
+      title: Basket
+      type: object
+      x-examples: {}
+      properties:
+        id:
+          type: string
+          description: 篮子编号，X.Y，X表示提交篮子时的编号，Y表示不同算法使用的篮子子集编号
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          type: string
+          description: 策略账号
+        baid:
+          type: string
+          description: 经纪账号，可选字段
+        algo_name:
+          type: string
+          description: 算法名称
+        algo_config:
+          type: string
+          description: 算法配置名称
+        begin_time:
+          type: string
+          description: '开始时间：HH:MM:SS'
+        end_time:
+          type: string
+          description: '停止时间：HH:MM:SS'
+        status:
+          type: string
+          description: '状态（1: 未开始，2: 执行中 3: 撤销中 4: 已拒绝 5: 已撤销 6: 已完成）'
+        remark:
+          type: string
+          description: 篮子备注
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BasketItem'
+    BasketState:
+      title: BasketState
+      type: object
+      x-examples: {}
+      properties:
+        basket_id:
+          type: string
+          description: 篮子编号
+        fund_id:
+          description: 基金编号
+          type: integer
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          description: 策略账号
+          type: string
+        buy_quantity:
+          type: integer
+          description: 目标买入数量
+        bought_quantity:
+          type: integer
+          description: 实际买入数量
+        sell_quantity:
+          type: number
+          description: 目标卖出数量
+        sold_quantity:
+          type: number
+          description: 实际卖出数量
+        buy_amount:
+          type: number
+          description: 目标买入金额
+        bought_amount:
+          type: number
+          description: 实际买入金额
+        sell_amount:
+          type: number
+          description: 目标卖出金额
+        sold_amount:
+          type: number
+          description: 实际卖出金额
+    Algo:
+      title: Algo
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 算法编号。每个交易日从1开始编号。
+        fund_id:
+          type: integer
+          description: 基金编号
+        said:
+          description: 策略账号
+          type: string
+        basket_id:
+          type: integer
+        type:
+          type: string
+          description: 算法类型。"TWAP"=twap算法
+        config:
+          type: object
+        state:
+          type: object
+        status:
+          type: string
+          description: 运行中
+        remark:
+          type: string
+          description: 备注
+        create_time:
+          type: string
+          description: '数据库中数据创建时间，2006-01-02 15:04:05.999'
+        update_time:
+          type: string
+          description: '数据库中数据更新时间，2006-01-02 15:04:05.999'
+        delete_time:
+          type: string
+          description: '数据库中数据删除时间，2006-01-02 15:04:05.999'
+    Twap:
+      title: Twap
+      type: object
+      properties:
+        balance_ratio:
+          description: 平衡比例
+          type: number
+        buy_price_type:
+          type: string
+          description: '买入价格类型。"L"=限价, "N"=最新价, "M"=市价, "A1"=卖1价, "A2"=卖2价, "A3"=卖3价, "A4"=卖4价, "A5"=卖5价, "A6"=卖6价, "A7"=卖7价, "A8"=卖8价, "A9"=卖9价, "A10"=卖10价, "B1"=买1价, "B2"=买2价, "B3"=买3价, "B4"=买4价, "B5"=买5价, "B6"=买6价, "B7"=买7价, "B8"=买8价, "B9"=买9价, "B10"=买10价'
+        buy_ratio:
+          description: 买入比例
+          type: number
+        sell_price_type:
+          type: string
+          description: '卖出价格类型。"L"=限价, "N"=最新价, "M"=市价, "A1"=卖1价, "A2"=卖2价, "A3"=卖3价, "A4"=卖4价, "A5"=卖5价, "A6"=卖6价, "A7"=卖7价, "A8"=卖8价, "A9"=卖9价, "A10"=卖10价, "B1"=买1价, "B2"=买2价, "B3"=买3价, "B4"=买4价, "B5"=买5价, "B6"=买6价, "B7"=买7价, "B8"=买8价, "B9"=买9价, "B10"=买10价'
+        sell_ratio:
+          description: 卖出比例
+          type: number
+        interval:
+          type: integer
+          description: 交易间隔。单位为秒
+        random_jitter:
+          type: number
+          description: 抖动间隔比例
+        buy_delay:
+          type: integer
+          description: 买入延迟，单位为秒
+        begin_at:
+          type: string
+          description: '交易起始时间，格式为HH:MM:SS'
+        end_at:
+          type: string
+          description: '交易结束时间，格式为HH:MM:SS'
+    OrderRoutingRule:
+      title: OrderRoutingRule
+      type: object
+      description: 委托路由规则
+      properties:
+        id:
+          type: string
+          description: 唯一标识
+        fund_id:
+          type: integer
+          description: 基金编号
+        fund_code:
+          type: string
+          description: 基金代码
+        said:
+          type: string
+          description: 策略账号
+        baid:
+          type: string
+          description: 经纪账号
+        begin_time:
+          type: string
+          description: '开始时间：HH:MM:SS'
+        end_time:
+          type: string
+          description: '停止时间：HH:MM:SS'
+        active:
+          type: boolean
+          description: 是否激活

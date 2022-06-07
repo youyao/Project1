@@ -1,0 +1,811 @@
+openapi: 3.0.0
+info:
+  title: Rhino Gateway
+  version: '1.4'
+  description: 提供算法、委托、查询等服务。
+servers:
+  - url: 'http://localhost:6018'
+    description: http接口
+  - description: websocket接口
+    url: 'ws://localhost:6018'
+tags:
+  - name: dms
+  - name: oms
+paths:
+  /orders:
+    parameters: []
+    get:
+      summary: 获取委托信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockOrder'
+              examples:
+                example-1:
+                  value:
+                    - id: string
+                      fund_said: string
+                      trading_day: string
+                      symbol: string
+                      business: string
+                      side: string
+                      price_type: string
+                      price: 0
+                      quantity: 0
+                      average_price: 0
+                      filled_quantity: 0
+                      leaves_quantity: 0
+                      frozen_amount: 0
+                      frozen_stamp_duty: 0
+                      frozen_commission: 0
+                      frozen_transfer_fee: 0
+                      stamp_duty: 0
+                      commission: 0
+                      transfer_fee: 0
+                      status: string
+                      done: true
+                      error_code: 0
+                      error_text: string
+                      source: string
+                      remark: string
+                      accept_time: string
+                      submit_time: string
+                      update_time: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetOrders
+      description: |-
+        根据指定参数获取委托信息。仅支持按以下参数组合查询：
+
+        * `fund_said`: 查询基金策略账户下所有委托
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_said
+          description: 基金策略账户
+          required: true
+      tags:
+        - dms
+    post:
+      summary: 申报委托
+      operationId: SubmitOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    error_code:
+                      description: 错误码
+                      type: integer
+                    error_text:
+                      type: string
+                      description: 错误信息
+                    symbol:
+                      type: string
+                      description: 证券代码
+                    business:
+                      type: string
+                      description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+                    side:
+                      type: string
+                      description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+                    price_type:
+                      type: string
+                      description: '价格类型。"L"=限价, "N"=最新价, "M"=市价, "A1"=卖1价, "A2"=卖2价, "A3"=卖3价, "A4"=卖4价, "A5"=卖5价, "A6"=卖6价, "A7"=卖7价, "A8"=卖8价, "A9"=卖9价, "A10"=卖10价, "B1"=买1价, "B2"=买2价, "B3"=买3价, "B4"=买4价, "B5"=买5价, "B6"=买6价, "B7"=买7价, "B8"=买8价, "B9"=买9价, "B10"=买10价'
+                    price:
+                      type: number
+                    quantity:
+                      description: 数量
+                      type: integer
+                    remark:
+                      type: string
+                      description: 备注
+                    ids:
+                      type: array
+                      description: 委托编号，不指定经纪账户时，存在多个委托编号返回，每个编号表示经纪账户所下委托
+                      items:
+                        type: string
+              examples:
+                example-1:
+                  value:
+                    - error_code: 0
+                      error_text: string
+                      symbol: string
+                      business: string
+                      side: string
+                      price_type: string
+                      price: 0
+                      quantity: 0
+                      remark: string
+                      ids:
+                        - string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example-1:
+                  value:
+                    code: -1
+                    text: string
+      description: 申报委托
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fund_said:
+                  type: string
+                  description: 基金策略账户
+                items:
+                  type: object
+                  properties:
+                    symbol:
+                      type: string
+                      description: '证券代码, 上交所股票代码如：600000.SSE,深交所股票代码如：000001.SZE'
+                    business:
+                      type: string
+                      description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+                    side:
+                      type: string
+                      description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+                    price_type:
+                      type: string
+                      description: '价格类型。"L"=限价, "N"=最新价, "M"=市价, "A1"=卖1价, "A2"=卖2价, "A3"=卖3价, "A4"=卖4价, "A5"=卖5价, "A6"=卖6价, "A7"=卖7价, "A8"=卖8价, "A9"=卖9价, "A10"=卖10价, "B1"=买1价, "B2"=买2价, "B3"=买3价, "B4"=买4价, "B5"=买5价, "B6"=买6价, "B7"=买7价, "B8"=买8价, "B9"=买9价, "B10"=买10价'
+                    price:
+                      type: number
+                    quantity:
+                      description: 数量
+                      type: integer
+                    remark:
+                      type: string
+                      description: 备注
+              required:
+                - fund_said
+                - items
+            examples:
+              example-1:
+                value:
+                  fund_said: string
+                  items:
+                    symbol: string
+                    business: string
+                    side: string
+                    price_type: string
+                    price: 0
+                    quantity: 0
+                    remark: string
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_said
+          description: 基金策略账户
+          required: true
+      tags:
+        - oms
+  /matches:
+    parameters: []
+    get:
+      summary: 获取成交信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockMatch'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetMatches
+      description: |-
+        根据指定参数获取成交信息。仅支持按以下参数组合查询：
+
+        * `fund_said`: 查询指定基金策略账户下所有成交信息
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_said
+          description: 基金策略账户
+          required: true
+      tags:
+        - dms
+  /cancels:
+    parameters: []
+    get:
+      summary: 获取撤单信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockCancel'
+              examples:
+                example-1:
+                  value:
+                    - id: string
+                      fund_said: string
+                      trading_day: string
+                      order_id: string
+                      symbol: string
+                      business: string
+                      side: string
+                      quantity: 0
+                      error_code: string
+                      error_text: string
+                      cancel_time: string
+                      recv_time: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetCancels
+      description: |-
+        根据指定参数获取撤单信息。仅支持按以下参数组合查询：
+
+        * `fund_said`: 查询指定基金策略账户的撤单信息
+        * 默认查询返回空数组
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_said
+          description: 基金策略账户
+          required: true
+      tags:
+        - dms
+    post:
+      summary: 委托撤单
+      operationId: CancelOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    error_code:
+                      type: string
+                      description: 错误代码
+                    error_text:
+                      type: string
+                      description: 错误信息
+                    id:
+                      type: string
+                      description: 委托编号
+              examples:
+                example-1:
+                  value:
+                    - error_code: string
+                      error_text: string
+                      id: string
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      description: 支持同时撤销指定基金中的多笔委托。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  description: 委托编号
+                  items:
+                    type: string
+              required:
+                - ids
+            examples:
+              example-1:
+                value:
+                  ids:
+                    - string
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_said
+          description: 基金策略账户
+          required: true
+      tags:
+        - oms
+  /positions:
+    parameters: []
+    get:
+      summary: 获取持仓信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockPosition'
+              examples:
+                example-1:
+                  value:
+                    - fund_said: string
+                      trading_day: string
+                      symbol: string
+                      type: string
+                      initial: 0
+                      total: 0
+                      available: 0
+                      buy_frozen: 0
+                      sell_frozen: 0
+                      cost_price: 0
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetPositions
+      description: |-
+        根据指定参数获取持仓信息。仅支持按以下参数组合查询：
+
+        * `fund_said`: 查询指定基金策略账户的持仓信息
+        * 默认查询指定基金下的所有策略账户的所有持仓信息
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_said
+          description: 基金策略账户
+          required: true
+      tags:
+        - dms
+  /assets:
+    parameters: []
+    get:
+      summary: 获取资金信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockAsset'
+              examples:
+                example-1:
+                  value:
+                    - fund_said: string
+                      trading_day: string
+                      initial_asset: 0
+                      initial_cash: 0
+                      total_asset: 0
+                      available_cash: 0
+                      frozen_cash: 0
+                      position_value: 0
+                      deposit: 0
+                      withdraw: 0
+                      frozen_stamp_duty: 0
+                      frozen_commision: 0
+                      frozen_transfer_fee: 0
+                      stamp_duty: 0
+                      commision: 0
+                      transfer_fee: 0
+                      close_profit: 0
+                      position_profit: 0
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: GetAssets
+      description: |-
+        根据指定参数获取资金信息。仅支持按以下参数组合查询：
+
+        * `fund_said`: 查询指定基金策略账户的资产信息
+        * 默认查询指定基金下的所有策略账户的所有资产信息
+
+        查询结果为数组，根据参数不同，可能含有0~N条记录。
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: fund_said
+          description: 基金策略账户
+          required: true
+      tags:
+        - dms
+  /reports:
+    get:
+      summary: Your GET endpoint
+      tags: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '#/components/schemas/StockOrder'
+                  match:
+                    $ref: '#/components/schemas/StockMatch'
+              examples:
+                example-1:
+                  value:
+                    order:
+                      id: string
+                      fund_said: string
+                      trading_day: string
+                      symbol: string
+                      business: string
+                      side: string
+                      price_type: string
+                      price: 0
+                      quantity: 0
+                      average_price: 0
+                      filled_quantity: 0
+                      leaves_quantity: 0
+                      frozen_amount: 0
+                      frozen_stamp_duty: 0
+                      frozen_commission: 0
+                      frozen_transfer_fee: 0
+                      stamp_duty: 0
+                      commission: 0
+                      transfer_fee: 0
+                      status: string
+                      done: true
+                      error_code: 0
+                      error_text: string
+                      source: string
+                      remark: string
+                      accept_time: string
+                      submit_time: string
+                      update_time: string
+                    match:
+                      id: string
+                      fund_said: string
+                      trading_day: string
+                      order_id: string
+                      symbol: string
+                      business: string
+                      side: string
+                      price: 0
+                      quantity: 0
+                      trade_time: string
+                      recv_time: string
+      operationId: get-reports
+      description: ''
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  fund_said:
+                    type: string
+            examples:
+              example-1:
+                value:
+                  - fund_said: string
+components:
+  schemas:
+    Error:
+      title: Error
+      type: object
+      description: ''
+      x-examples: {}
+      properties:
+        code:
+          type: integer
+          description: 错误编号
+          example: -1
+        text:
+          type: string
+          description: 错误文本
+    StockOrder:
+      title: StockOrder
+      type: object
+      description: ''
+      properties:
+        id:
+          type: string
+          description: 委托编号。交易日+基金唯一确定一笔委托，从1开始编号。
+        fund_said:
+          type: string
+          description: 基金策略账户
+        trading_day:
+          type: string
+          description: '交易日，格式: YYYY-MM-DD'
+        symbol:
+          type: string
+          description: '证券代码, 上交所股票代码如：600000.SSE,深交所股票代码如：000001.SZE'
+        business:
+          type: string
+          description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+        side:
+          type: string
+          description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+        price_type:
+          type: string
+          description: '价格类型。"L"=限价, "N"=最新价, "M"=市价, "A1"=卖1价, "A2"=卖2价, "A3"=卖3价, "A4"=卖4价, "A5"=卖5价, "A6"=卖6价, "A7"=卖7价, "A8"=卖8价, "A9"=卖9价, "A10"=卖10价, "B1"=买1价, "B2"=买2价, "B3"=买3价, "B4"=买4价, "B5"=买5价, "B6"=买6价, "B7"=买7价, "B8"=买8价, "B9"=买9价, "B10"=买10价'
+        price:
+          description: 委托价格
+          type: number
+        quantity:
+          description: 委托数量
+          type: integer
+        average_price:
+          description: 成交均价
+          type: number
+        filled_quantity:
+          description: 成交数量
+          type: integer
+        leaves_quantity:
+          description: 剩余数量
+          type: integer
+        frozen_amount:
+          description: 冻结金额，仅为挂单市值，不含费用
+          type: number
+        frozen_stamp_duty:
+          description: 冻结的印花税
+          type: number
+        frozen_commission:
+          description: 冻结的佣金
+          type: number
+        frozen_transfer_fee:
+          description: 冻结的过户费
+          type: number
+        stamp_duty:
+          description: 印花税
+          type: number
+        commission:
+          description: 佣金
+          type: number
+        transfer_fee:
+          description: 过户费
+          type: number
+        status:
+          type: string
+          description: '委托状态。"1"=待报, "2"=已报, "3"=待撤, "4"=部分成交, "5"=部成待撤, "6"=部成已撤, "F"=已成, "C"=已撤, "R"=废单'
+        done:
+          description: 是否完成（只有当委托状态处于已撤/已成/废单时，才算完成)
+          type: boolean
+        error_code:
+          description: 错误代码
+          type: integer
+        error_text:
+          type: string
+          description: 错误文本
+        source:
+          type: string
+          description: 委托来源。用于标识客户端版本信息。
+        remark:
+          type: string
+          description: 委托备注。由用户指定。
+        accept_time:
+          type: string
+          description: '本地收到时间 HH:MM:SS.ssssss'
+        submit_time:
+          type: string
+          description: '本地提交到STS时间 HH:MM:SS.ssssss'
+        update_time:
+          type: string
+          description: '更新时间 HH:MM:SS.ssssss'
+    StockMatch:
+      title: StockMatch
+      type: object
+      properties:
+        id:
+          type: string
+          description: 成交编号。交易日+基金策略账户+成交编号 可唯一确定一笔成交，由交易所确定其值。
+        fund_said:
+          description: 基金策略账户
+          type: string
+        trading_day:
+          type: string
+          description: '交易日，格式: YYYY-MM-DD'
+        order_id:
+          type: string
+          description: 委托编号
+        symbol:
+          type: string
+          description: '证券代码, 上交所股票代码如：600000.SSE,深交所股票代码如：000001.SZE'
+        business:
+          type: string
+          description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+        side:
+          type: string
+          description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+        price:
+          description: 成交价
+          type: number
+        quantity:
+          description: 成交数量
+          type: integer
+        trade_time:
+          type: string
+          description: '成交时间 HH:MM:SS.ssssss'
+        recv_time:
+          type: string
+          description: '本地收到时间 HH:MM:SS.ssssss'
+    StockCancel:
+      title: StockCancel
+      type: object
+      properties:
+        id:
+          type: string
+          description: 撤单编号
+        fund_said:
+          description: 基金策略账户
+          type: string
+        trading_day:
+          type: string
+          description: '交易日，格式: YYYY-MM-DD'
+        order_id:
+          type: string
+          description: 委托编号
+        symbol:
+          type: string
+          description: '证券代码, 上交所股票代码如：600000.SSE,深交所股票代码如：000001.SZE'
+        business:
+          type: string
+          description: '业务类别。"1"=普通交易, "2"=信用交易(融资融券), "3"=债券质押式协议回购(Bond Pledge Agreement Repo), "4"=网上发行认购(新股申购)'
+        side:
+          type: string
+          description: '买卖方向。"B"=买入, "S"=卖出, "SS"=融券卖出, "BC"=买券还券, "FB"=融资买入, "SR"=卖券还款'
+        quantity:
+          description: 撤单数量
+          type: integer
+        error_code:
+          type: string
+          description: 错误代码
+        error_text:
+          type: string
+          description: 错误文本
+        cancel_time:
+          type: string
+          description: '撤单时间 HH:MM:SS.ssssss。这个值可能来自交易所发出的，也有可能来自柜台或STS'
+        recv_time:
+          type: string
+          description: '本地收到时间 HH:MM:SS.ssssss'
+    StockPosition:
+      title: StockPosition
+      type: object
+      properties:
+        fund_said:
+          description: 基金编号
+          type: string
+        trading_day:
+          type: string
+          description: '交易日，格式: YYYY-MM-DD'
+        symbol:
+          type: string
+          description: 证券代码
+        type:
+          type: string
+          description: 持仓类型。"1"=多头，"2"=空头
+        initial:
+          description: 期初持仓
+          type: integer
+        total:
+          description: 实时总持仓
+          type: integer
+        available:
+          description: 可用持仓
+          type: integer
+        buy_frozen:
+          description: 买入冻结
+          type: integer
+        sell_frozen:
+          description: 卖出冻结
+          type: integer
+        cost_price:
+          description: 成本价
+          type: number
+    StockAsset:
+      title: StockAsset
+      type: object
+      properties:
+        fund_said:
+          description: 基金策略账户
+          type: string
+        trading_day:
+          type: string
+          description: '交易日，格式: YYYY-MM-DD'
+        initial_asset:
+          description: '期初总资产: 可用资金+持仓市值+现金分红'
+          type: number
+        initial_cash:
+          description: 期初可用
+          type: number
+        total_asset:
+          description: '总资产: 可用资金+冻结资金+持仓市值+预留资金+现金分红'
+          type: number
+        available_cash:
+          description: 可用资金
+          type: number
+        frozen_cash:
+          description: 冻结资金
+          type: number
+        position_value:
+          description: 持仓市值
+          type: number
+        deposit:
+          description: 入金金额
+          type: number
+        withdraw:
+          description: 出金金额
+          type: number
+        frozen_stamp_duty:
+          description: 冻结印花税
+          type: number
+        frozen_commision:
+          description: 冻结的佣金
+          type: number
+        frozen_transfer_fee:
+          description: 冻结的过户费
+          type: number
+        stamp_duty:
+          description: 印花税
+          type: number
+        commision:
+          description: 佣金
+          type: number
+        transfer_fee:
+          description: 过户费
+          type: number
+        close_profit:
+          description: 平仓盈亏
+          type: number
+        position_profit:
+          description: 持仓盈亏
+          type: number
